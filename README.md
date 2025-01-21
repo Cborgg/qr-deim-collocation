@@ -1,5 +1,7 @@
 # An Adaptive Collocation Point Strategy For Physics Informed Neural Networks via the QR Discrete Empirical Interpolation Method
 
+arXiv preprint: https://arxiv.org/abs/2501.07700
+
 This repository implements the following collocation point selection strategies:
 * Uniform random (non-adaptive)
 * [Greedy](https://epubs.siam.org/doi/10.1137/19M1274067)
