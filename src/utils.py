@@ -86,6 +86,23 @@ def burgers_equation_output_transform(u, x, t):
     return u * (t * (x**2 - 1)) + Constants.BURGERS_INITIAL_CONDITION(x)
 
 
+def helmholtz_output_transform(
+    u: torch.Tensor,
+    x: torch.Tensor,
+    x1: float = 0.0,
+    x2: float = 1.0,
+    p1: float = 1.0,
+    p2: float = -1.0,
+):
+    """Transform the output for the 1D Helmholtz equation.
+
+    This enforces the boundary conditions ``p(x1)=p1`` and ``p(x2)=p2`` by
+    adding a function that is zero at ``x1`` and ``x2``.
+    """
+    bc = p1 + (p2 - p1) * (x - x1) / (x2 - x1)
+    return bc + (x - x1) * (x - x2) * u
+
+
 def wave_equation_true_solution(x, t):
     """Compute the true solution for the wave equation."""
     return (
@@ -185,3 +202,19 @@ def burgers_equation_residual(
         u_x, data, grad_outputs=torch.ones_like(u_x), create_graph=True
     )[0][:, 0]
     return u_t + u.squeeze(-1) * u_x - viscosity * u_xx
+
+
+def helmholtz_residual(
+    model: nn.Module,
+    data: torch.Tensor,
+    k: float = 1.0,
+) -> torch.Tensor:
+    """Residual for the 1D Helmholtz equation ``p'' + k^2 p = 0``."""
+    p = model(data)
+    p_x = torch.autograd.grad(
+        p, data, grad_outputs=torch.ones_like(p), create_graph=True
+    )[0][:, 0]
+    p_xx = torch.autograd.grad(
+        p_x, data, grad_outputs=torch.ones_like(p_x), create_graph=True
+    )[0][:, 0]
+    return p_xx + k**2 * p.squeeze(-1)
