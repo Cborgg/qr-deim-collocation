@@ -8,17 +8,17 @@ class FeedForwardNet(nn.Module):
     """Generic feedforward neural network.
 
     Attributes:
-        first_layer: First layer of the neural network. Takes two inputs and
-            maps to hidden_size.
+        first_layer: First layer of the neural network. Takes ``input_dim``
+            inputs and maps to ``hidden_size``.
         hidden_layers: List of hidden layers. Each hidden layer is a linear
             layer followed by a Tanh activation function. Each layer has
             hidden_size neurons.
         last_layer: Last layer of the neural network. Maps from hidden_size to
             one output.
     """
-    def __init__(self, hidden_size: int, num_layers: int):
+    def __init__(self, hidden_size: int, num_layers: int, input_dim: int = 2):
         super().__init__()
-        self.first_layer = nn.Linear(2, hidden_size)
+        self.first_layer = nn.Linear(input_dim, hidden_size)
         self.hidden_layers = nn.Sequential(
             *[
                 nn.Sequential(
@@ -56,9 +56,11 @@ class PINN(FeedForwardNet):
         hidden_size: int,
         num_layers: int,
         output_transform: Callable[[torch.Tensor], torch.Tensor],
+        input_dim: int = 2,
     ):
-        super().__init__(hidden_size, num_layers)
+        super().__init__(hidden_size, num_layers, input_dim)
         self.output_transform = output_transform
+        self.input_dim = input_dim
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         """Forward pass for the PINN."""
@@ -66,10 +68,14 @@ class PINN(FeedForwardNet):
         u = super().forward(data)
 
         # Transform the output to enforce the initial and boundary conditions.
-        # Exapand the dimensions of x and t to match the shape of u and avoid
-        # broadcasting issues.
-        x = data[:, 0].unsqueeze(1)
-        t = data[:, 1].unsqueeze(1)
-
-        # Apply the output transform and return the result.
-        return self.output_transform(u, x, t)
+        if self.input_dim == 2:
+            # Expand the dimensions of x and t to match the shape of ``u`` and
+            # avoid broadcasting issues.
+            x = data[:, 0].unsqueeze(1)
+            t = data[:, 1].unsqueeze(1)
+            return self.output_transform(u, x, t)
+        elif self.input_dim == 1:
+            x = data[:, 0].unsqueeze(1)
+            return self.output_transform(u, x)
+        else:
+            raise ValueError(f"Unsupported input_dim: {self.input_dim}")
